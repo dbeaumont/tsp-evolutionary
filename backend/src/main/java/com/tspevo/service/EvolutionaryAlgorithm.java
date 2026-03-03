@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 public class EvolutionaryAlgorithm {
     
     private static final int POPULATION_SIZE = 100;
-    private static final int MAX_GENERATIONS = 500;
+    private static final int MAX_GENERATIONS = 2000;
     private static final double MUTATION_RATE = 0.02;
     private static final double CROSSOVER_RATE = 0.8;
     private static final int TOURNAMENT_SIZE = 5;
