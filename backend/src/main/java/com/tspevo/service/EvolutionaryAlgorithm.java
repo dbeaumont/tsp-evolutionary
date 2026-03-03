@@ -146,17 +146,31 @@ public class EvolutionaryAlgorithm {
     private double calculateDistance(List<City> route) {
         double distance = 0.0;
         for (int i = 0; i < route.size() - 1; i++) {
-            distance += euclideanDistance(route.get(i), route.get(i + 1));
+            distance += haversineDistance(route.get(i), route.get(i + 1));
         }
         if (route.size() > 1) {
-            distance += euclideanDistance(route.get(route.size() - 1), route.get(0));
+            distance += haversineDistance(route.get(route.size() - 1), route.get(0));
         }
         return distance;
     }
     
-    private double euclideanDistance(City c1, City c2) {
-        double dx = c1.getX() - c2.getX();
-        double dy = c1.getY() - c2.getY();
-        return Math.sqrt(dx * dx + dy * dy);
+    private double haversineDistance(City c1, City c2) {
+        final double R = 6371.0;
+        
+        double lat1 = Math.toRadians(c1.getX());
+        double lat2 = Math.toRadians(c2.getX());
+        double lon1 = Math.toRadians(c1.getY());
+        double lon2 = Math.toRadians(c2.getY());
+        
+        double dLat = lat2 - lat1;
+        double dLon = lon2 - lon1;
+        
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(lat1) * Math.cos(lat2) *
+                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        
+        return R * c;
     }
 }

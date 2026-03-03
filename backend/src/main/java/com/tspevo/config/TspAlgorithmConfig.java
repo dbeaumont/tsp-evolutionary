@@ -12,7 +12,7 @@ public class TspAlgorithmConfig {
     private double mutationRate = 0.02;
     private double crossoverRate = 0.8;
     private int tournamentSize = 5;
-    private int progressInterval = 1;
+    private int progressInterval = 5;
 
     public int getPopulationSize() {
         return populationSize;

@@ -2,7 +2,6 @@ package com.tspevo.controller;
 
 import com.tspevo.model.City;
 import com.tspevo.model.TspResult;
-import com.tspevo.service.TspProgress;
 import com.tspevo.service.TspService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

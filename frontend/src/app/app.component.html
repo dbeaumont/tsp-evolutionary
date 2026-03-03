@@ -56,7 +56,7 @@
 
     <div class="progress-info" *ngIf="optimizing && currentProgress">
       <p><strong>Génération:</strong> {{ currentProgress.generation }} | 
-         <strong>Distance:</strong> {{ currentProgress.distance | number:'1.2-2' }}</p>
+         <strong>Distance (km):</strong> {{ currentProgress.distance | number:'1.2-2' }}</p>
       
       <div class="route-list">
         <strong>Trajet optimal en cours:</strong><br>
@@ -72,7 +72,7 @@
 
     <div class="result" *ngIf="result">
       <h3>Résultat optimal trouvé!</h3>
-      <p><strong>Distance totale:</strong> {{ result.totalDistance | number:'1.2-2' }}</p>
+      <p><strong>Distance totale (km):</strong> {{ result.totalDistance | number:'1.2-2' }}</p>
       <p><strong>Générations:</strong> {{ result.generations }}</p>
       <p><strong>Temps d'exécution:</strong> {{ result.executionTimeMs }}ms</p>
       
