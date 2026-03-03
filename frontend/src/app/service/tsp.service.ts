@@ -29,7 +29,7 @@ export class TspService {
 
   optimizeStream(): Subject<TspProgress> {
     const subject = new Subject<TspProgress>();
-    const eventSource = new EventSource('/api/tsp/optimize/stream');
+    const eventSource = new EventSource('http://localhost:8080/api/tsp/optimize/stream');
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);

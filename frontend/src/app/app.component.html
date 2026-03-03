@@ -41,6 +41,10 @@
             [disabled]="cities.length < 2 || optimizing">
       {{ optimizing ? 'Optimisation en cours...' : 'Optimiser le trajet' }}
     </button>
+    <button class="btn btn-secondary" (click)="clearResult()" *ngIf="result || currentProgress"
+            [disabled]="optimizing">
+      Clear
+    </button>
 
     <div class="progress-info" *ngIf="optimizing && currentProgress">
       <p><strong>Génération:</strong> {{ currentProgress.generation }} | 

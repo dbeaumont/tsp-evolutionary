@@ -156,17 +156,26 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.currentProgress = null;
     this.result = null;
 
+    if (this.routeLine) {
+      this.routeLine.remove();
+      this.routeLine = null;
+    }
+
+    console.log('Starting optimization stream...');
     const progress$ = this.tspService.optimizeStream();
 
     progress$.subscribe({
       next: (progress) => {
+        console.log('Progress received:', progress.generation, progress.distance);
         this.currentProgress = progress;
         this.updateRoute(progress.bestRoute);
       },
-      error: () => {
+      error: (err) => {
+        console.error('Stream error:', err);
         this.optimizing = false;
       },
       complete: () => {
+        console.log('Stream completed, getting final result...');
         this.optimizing = false;
         this.tspService.optimize().subscribe({
           next: (result) => {
@@ -177,6 +186,15 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         });
       }
     });
+  }
+
+  clearResult() {
+    this.result = null;
+    this.currentProgress = null;
+    if (this.routeLine) {
+      this.routeLine.remove();
+      this.routeLine = null;
+    }
   }
 
   seedCities() {

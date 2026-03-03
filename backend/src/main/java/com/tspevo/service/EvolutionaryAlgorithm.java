@@ -44,7 +44,7 @@ public class EvolutionaryAlgorithm {
             }
             
             if (progressCallback != null && gen % 5 == 0) {
-                progressCallback.accept(new TspProgress(gen + 1, new ArrayList<>(population.get(0)), bestFitness));
+                progressCallback.accept(new TspProgress(gen + 1, new ArrayList<>(bestIndividual), bestFitness));
             }
             
             List<List<City>> newPopulation = new ArrayList<>();
