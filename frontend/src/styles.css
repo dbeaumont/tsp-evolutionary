@@ -117,6 +117,7 @@ input:focus {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: flex-start;
 }
 
 .btn-group .btn {
