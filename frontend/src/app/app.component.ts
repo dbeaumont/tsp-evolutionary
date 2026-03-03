@@ -154,6 +154,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.optimizing = true;
     this.currentProgress = null;
+    this.result = null;
 
     const progress$ = this.tspService.optimizeStream();
 
@@ -167,6 +168,13 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       complete: () => {
         this.optimizing = false;
+        this.tspService.optimize().subscribe({
+          next: (result) => {
+            this.result = result;
+            this.currentProgress = null;
+            this.updateRoute(result.optimalRoute);
+          }
+        });
       }
     });
   }

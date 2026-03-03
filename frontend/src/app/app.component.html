@@ -45,6 +45,17 @@
     <div class="progress-info" *ngIf="optimizing && currentProgress">
       <p><strong>Génération:</strong> {{ currentProgress.generation }} | 
          <strong>Distance:</strong> {{ currentProgress.distance | number:'1.2-2' }}</p>
+      
+      <div class="route-list">
+        <strong>Trajet optimal en cours:</strong><br>
+        <span class="route-item" *ngFor="let city of currentProgress.bestRoute; let i = index">
+          {{ city.name }}
+          <span class="route-arrow" *ngIf="i < currentProgress.bestRoute.length - 1">→</span>
+        </span>
+        <span class="route-item" *ngIf="currentProgress.bestRoute.length > 0">
+          → {{ currentProgress.bestRoute[0].name }}
+        </span>
+      </div>
     </div>
 
     <div class="result" *ngIf="result">
