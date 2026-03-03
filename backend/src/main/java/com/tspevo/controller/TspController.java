@@ -4,6 +4,8 @@ import com.tspevo.model.City;
 import com.tspevo.model.TspResult;
 import com.tspevo.service.TspProgress;
 import com.tspevo.service.TspService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,8 @@ import java.util.concurrent.Executors;
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class TspController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(TspController.class);
     
     @Autowired
     private TspService tspService;
@@ -47,21 +51,26 @@ public class TspController {
     
     @GetMapping("/tsp/optimize/stream")
     public ResponseEntity<SseEmitter> optimizeStream() {
+        logger.info("Starting SSE stream for TSP optimization");
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
         
         executor.execute(() -> {
             try {
                 tspService.optimizeWithProgress(progress -> {
                     try {
+                        logger.debug("Sending progress: generation {}", progress.getGeneration());
                         emitter.send(SseEmitter.event()
                             .name("progress")
                             .data(progress));
                     } catch (Exception e) {
+                        logger.error("Error sending progress", e);
                         emitter.completeWithError(e);
                     }
                 });
+                logger.info("Optimization complete, closing emitter");
                 emitter.complete();
             } catch (Exception e) {
+                logger.error("Error in optimization", e);
                 emitter.completeWithError(e);
             }
         });

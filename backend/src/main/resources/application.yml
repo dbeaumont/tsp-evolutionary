@@ -14,3 +14,12 @@ spring:
 
 server:
   port: 8080
+
+tsp:
+  algorithm:
+    population-size: 100
+    max-generations: 2000
+    mutation-rate: 0.02
+    crossover-rate: 0.8
+    tournament-size: 5
+    progress-interval: 1

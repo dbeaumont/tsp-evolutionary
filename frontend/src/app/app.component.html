@@ -1,6 +1,10 @@
 <div class="container">
   <h1>TSP - Algorithme Évolutionnaire</h1>
 
+  <div class="toast" *ngIf="toast" [ngClass]="'toast-' + toast.type">
+    {{ toast.message }}
+  </div>
+
   <div class="card">
     <h2>Ajouter une ville</h2>
     <div class="form-group">
@@ -28,23 +32,27 @@
       </li>
     </ul>
     <p *ngIf="cities.length === 0">Aucune ville ajoutée</p>
-    <button class="btn btn-danger" (click)="clearCities()" *ngIf="cities.length > 0">
-      Tout effacer
-    </button>
-    <button class="btn btn-secondary" (click)="seedCities()" [disabled]="loading">
-      {{ loading ? 'Chargement...' : 'Charger villes' }}
-    </button>
+    <div class="btn-group">
+      <button class="btn btn-danger" (click)="clearCities()" *ngIf="cities.length > 0">
+        Tout effacer
+      </button>
+      <button class="btn btn-secondary" (click)="seedCities()" [disabled]="loading">
+        {{ loading ? 'Chargement...' : 'Charger villes' }}
+      </button>
+    </div>
   </div>
 
   <div class="card">
-    <button class="btn btn-success" (click)="optimize()" 
-            [disabled]="cities.length < 2 || optimizing">
-      {{ optimizing ? 'Optimisation en cours...' : 'Optimiser le trajet' }}
-    </button>
-    <button class="btn btn-secondary" (click)="clearResult()" *ngIf="result || currentProgress"
-            [disabled]="optimizing">
-      Clear
-    </button>
+    <div class="btn-group">
+      <button class="btn btn-success" (click)="optimize()" 
+              [disabled]="cities.length < 2 || optimizing">
+        {{ optimizing ? 'Optimisation en cours...' : 'Optimiser le trajet' }}
+      </button>
+      <button class="btn btn-secondary" (click)="clearResult()" *ngIf="result || currentProgress"
+              [disabled]="optimizing">
+        Clear
+      </button>
+    </div>
 
     <div class="progress-info" *ngIf="optimizing && currentProgress">
       <p><strong>Génération:</strong> {{ currentProgress.generation }} | 

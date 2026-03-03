@@ -1,7 +1,11 @@
 package com.tspevo.service;
 
+import com.tspevo.config.TspAlgorithmConfig;
 import com.tspevo.model.City;
 import com.tspevo.model.TspResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -10,12 +14,15 @@ import java.util.function.Consumer;
 @Service
 public class EvolutionaryAlgorithm {
     
-    private static final int POPULATION_SIZE = 100;
-    private static final int MAX_GENERATIONS = 2000;
-    private static final double MUTATION_RATE = 0.02;
-    private static final double CROSSOVER_RATE = 0.8;
-    private static final int TOURNAMENT_SIZE = 5;
+    private static final Logger logger = LoggerFactory.getLogger(EvolutionaryAlgorithm.class);
     private static final Random random = new Random();
+    
+    @Autowired
+    private TspAlgorithmConfig config;
+
+    public void setConfig(TspAlgorithmConfig config) {
+        this.config = config;
+    }
     
     public TspResult solve(List<City> cities) {
         return solve(cities, null);
@@ -28,12 +35,12 @@ public class EvolutionaryAlgorithm {
         
         long startTime = System.currentTimeMillis();
         
-        List<List<City>> population = initializePopulation(cities, POPULATION_SIZE);
+        List<List<City>> population = initializePopulation(cities, config.getPopulationSize());
         List<City> bestIndividual = null;
         double bestFitness = Double.MAX_VALUE;
         int generation = 0;
         
-        for (int gen = 0; gen < MAX_GENERATIONS; gen++) {
+        for (int gen = 0; gen < config.getMaxGenerations(); gen++) {
             Collections.sort(population, Comparator.comparingDouble(this::calculateDistance));
             
             double currentBest = calculateDistance(population.get(0));
@@ -43,25 +50,26 @@ public class EvolutionaryAlgorithm {
                 generation = gen + 1;
             }
             
-            if (progressCallback != null && gen % 5 == 0) {
+            if (progressCallback != null && gen % config.getProgressInterval() == 0) {
+                logger.debug("Generation {} - Best distance: {}", gen + 1, bestFitness);
                 progressCallback.accept(new TspProgress(gen + 1, new ArrayList<>(bestIndividual), bestFitness));
             }
             
             List<List<City>> newPopulation = new ArrayList<>();
             newPopulation.add(new ArrayList<>(population.get(0)));
             
-            while (newPopulation.size() < POPULATION_SIZE) {
+            while (newPopulation.size() < config.getPopulationSize()) {
                 List<City> parent1 = tournamentSelection(population);
                 List<City> parent2 = tournamentSelection(population);
                 
                 List<City> child;
-                if (random.nextDouble() < CROSSOVER_RATE) {
+                if (random.nextDouble() < config.getCrossoverRate()) {
                     child = crossover(parent1, parent2);
                 } else {
                     child = new ArrayList<>(random.nextBoolean() ? parent1 : parent2);
                 }
                 
-                if (random.nextDouble() < MUTATION_RATE) {
+                if (random.nextDouble() < config.getMutationRate()) {
                     mutate(child);
                 }
                 
@@ -75,7 +83,7 @@ public class EvolutionaryAlgorithm {
         
         if (bestIndividual == null) {
             bestIndividual = population.get(0);
-            generation = MAX_GENERATIONS;
+            generation = config.getMaxGenerations();
         }
         
         return new TspResult(bestIndividual, bestFitness, generation, endTime - startTime);
@@ -93,7 +101,7 @@ public class EvolutionaryAlgorithm {
     
     private List<City> tournamentSelection(List<List<City>> population) {
         List<City> best = null;
-        for (int i = 0; i < TOURNAMENT_SIZE; i++) {
+        for (int i = 0; i < config.getTournamentSize(); i++) {
             List<City> individual = population.get(random.nextInt(population.size()));
             if (best == null || calculateDistance(individual) < calculateDistance(best)) {
                 best = new ArrayList<>(individual);

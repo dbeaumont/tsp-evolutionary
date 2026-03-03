@@ -2,6 +2,7 @@ import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TspService } from './service/tsp.service';
+import { ToastService } from './service/toast.service';
 import { City, TspResult, TspProgress } from './model/city';
 import * as L from 'leaflet';
 
@@ -19,15 +20,31 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   loading = false;
   optimizing = false;
   currentProgress: TspProgress | null = null;
+  toast: { message: string; type: string } | null = null;
+  private toastTimeout: any;
 
   private map!: L.Map;
   private markers: L.CircleMarker[] = [];
   private routeLine: L.Polyline | null = null;
 
-  constructor(private tspService: TspService) {}
+  constructor(
+    private tspService: TspService,
+    private toastService: ToastService
+  ) {}
 
   ngOnInit() {
     this.loadCities();
+    this.toastService.toasts$.subscribe(toast => {
+      this.showToast(toast.message, toast.type);
+    });
+  }
+
+  private showToast(message: string, type: string) {
+    this.toast = { message, type };
+    clearTimeout(this.toastTimeout);
+    this.toastTimeout = setTimeout(() => {
+      this.toast = null;
+    }, 3000);
   }
 
   ngAfterViewInit() {
@@ -110,7 +127,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         this.cities = cities;
         setTimeout(() => this.updateMap(), 100);
       },
-      error: () => this.cities = []
+      error: (err) => {
+        this.toastService.error('Erreur lors du chargement des villes');
+        this.cities = [];
+      }
     });
   }
 
@@ -132,7 +152,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
           this.routeLine = null;
         }
       },
-      error: () => this.loading = false
+      error: () => {
+        this.loading = false;
+        this.toastService.error('Erreur lors de l\'ajout de la ville');
+      }
     });
   }
 
@@ -143,12 +166,14 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         this.result = null;
         this.currentProgress = null;
         this.updateMap();
-      }
+      },
+      error: () => this.toastService.error('Erreur lors de l\'effacement des villes')
     });
   }
 
   optimize() {
     if (this.cities.length < 2) {
+      this.toastService.error('Il faut au moins 2 villes pour optimiser');
       return;
     }
 
@@ -161,27 +186,28 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       this.routeLine = null;
     }
 
-    console.log('Starting optimization stream...');
     const progress$ = this.tspService.optimizeStream();
 
     progress$.subscribe({
       next: (progress) => {
-        console.log('Progress received:', progress.generation, progress.distance);
         this.currentProgress = progress;
         this.updateRoute(progress.bestRoute);
       },
       error: (err) => {
-        console.error('Stream error:', err);
+        this.toastService.error('Erreur lors de l\'optimisation');
         this.optimizing = false;
       },
       complete: () => {
-        console.log('Stream completed, getting final result...');
         this.optimizing = false;
         this.tspService.optimize().subscribe({
           next: (result) => {
             this.result = result;
             this.currentProgress = null;
             this.updateRoute(result.optimalRoute);
+            this.toastService.success('Optimisation terminée !');
+          },
+          error: () => {
+            this.toastService.error('Erreur lors de la récupération du résultat');
           }
         });
       }

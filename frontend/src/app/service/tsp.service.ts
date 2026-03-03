@@ -7,7 +7,9 @@ import { City, TspResult, TspProgress } from '../model/city';
   providedIn: 'root'
 })
 export class TspService {
-  private apiUrl = 'http://localhost:8080/api';
+  private apiUrl = window.location.hostname === 'localhost' 
+    ? 'http://localhost:8080/api' 
+    : '/api';
 
   constructor(private http: HttpClient) {}
 
@@ -29,7 +31,10 @@ export class TspService {
 
   optimizeStream(): Subject<TspProgress> {
     const subject = new Subject<TspProgress>();
-    const eventSource = new EventSource('http://localhost:8080/api/tsp/optimize/stream');
+    const baseUrl = window.location.hostname === 'localhost' 
+      ? 'http://localhost:8080' 
+      : '';
+    const eventSource = new EventSource(`${baseUrl}/api/tsp/optimize/stream`);
 
     eventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);

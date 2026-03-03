@@ -83,7 +83,6 @@ input:focus {
 .btn-danger {
   background: #e53e3e;
   color: white;
-  margin-left: 10px;
 }
 
 .btn-danger:hover {
@@ -93,7 +92,6 @@ input:focus {
 .btn-secondary {
   background: #718096;
   color: white;
-  margin-left: 10px;
 }
 
 .btn-secondary:hover {
@@ -103,8 +101,7 @@ input:focus {
 .btn-success {
   background: #38a169;
   color: white;
-  width: 100%;
-  margin-top: 10px;
+  flex: 1;
 }
 
 .btn-success:hover {
@@ -116,8 +113,21 @@ input:focus {
   cursor: not-allowed;
 }
 
+.btn-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-group .btn {
+  flex: 1;
+  min-width: 150px;
+}
+
 .city-list {
   list-style: none;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .city-item {
@@ -152,6 +162,8 @@ input:focus {
 
 .route-list {
   margin-top: 15px;
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .route-item {
@@ -193,4 +205,90 @@ input:focus {
 
 .progress-info p {
   margin: 0;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 24px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  z-index: 9999;
+  animation: slideIn 0.3s ease;
+  max-width: 90%;
+}
+
+.toast-error {
+  background: #e53e3e;
+}
+
+.toast-success {
+  background: #38a169;
+}
+
+.toast-info {
+  background: #3182ce;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  #map {
+    height: 300px;
+  }
+
+  .btn-group {
+    flex-direction: column;
+  }
+
+  .btn-group .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .card {
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  #map {
+    height: 250px;
+  }
+
+  .route-item {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
 }
