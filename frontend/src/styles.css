@@ -1,0 +1,196 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+h1 {
+  color: white;
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2.5rem;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+h2 {
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  color: #555;
+  font-weight: 500;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: #667eea;
+  color: white;
+  width: 100%;
+}
+
+.btn-primary:hover {
+  background: #5568d3;
+}
+
+.btn-danger {
+  background: #e53e3e;
+  color: white;
+  margin-left: 10px;
+}
+
+.btn-danger:hover {
+  background: #c53030;
+}
+
+.btn-secondary {
+  background: #718096;
+  color: white;
+  margin-left: 10px;
+}
+
+.btn-secondary:hover {
+  background: #4a5568;
+}
+
+.btn-success {
+  background: #38a169;
+  color: white;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.btn-success:hover {
+  background: #2f855a;
+}
+
+.btn-success:disabled {
+  background: #a0aec0;
+  cursor: not-allowed;
+}
+
+.city-list {
+  list-style: none;
+}
+
+.city-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.city-item:last-child {
+  border-bottom: none;
+}
+
+.result {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f0fff4;
+  border-radius: 8px;
+  border: 1px solid #c6f6d5;
+}
+
+.result h3 {
+  color: #276749;
+  margin-bottom: 10px;
+}
+
+.result p {
+  margin: 5px 0;
+  color: #555;
+}
+
+.route-list {
+  margin-top: 15px;
+}
+
+.route-item {
+  display: inline-block;
+  padding: 5px 10px;
+  margin: 3px;
+  background: #667eea;
+  color: white;
+  border-radius: 15px;
+  font-size: 14px;
+}
+
+.route-arrow {
+  color: #667eea;
+  font-weight: bold;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #667eea;
+}
+
+#map {
+  height: 500px;
+  width: 100%;
+  border-radius: 8px;
+  z-index: 1;
+}
+
+.progress-info {
+  margin-top: 15px;
+  padding: 10px;
+  background: #ebf8ff;
+  border-radius: 8px;
+  color: #2c5282;
+  text-align: center;
+}
+
+.progress-info p {
+  margin: 0;
+}

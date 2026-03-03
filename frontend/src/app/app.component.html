@@ -1,0 +1,73 @@
+<div class="container">
+  <h1>TSP - Algorithme Évolutionnaire</h1>
+
+  <div class="card">
+    <h2>Ajouter une ville</h2>
+    <div class="form-group">
+      <label>Nom de la ville</label>
+      <input type="text" [(ngModel)]="newCity.name" placeholder="Ex: Paris">
+    </div>
+    <div class="form-group">
+      <label>Coordonnée X (0-100)</label>
+      <input type="number" [(ngModel)]="newCity.x" placeholder="Ex: 10" min="0" max="100">
+    </div>
+    <div class="form-group">
+      <label>Coordonnée Y (0-100)</label>
+      <input type="number" [(ngModel)]="newCity.y" placeholder="Ex: 20" min="0" max="100">
+    </div>
+    <button class="btn btn-primary" (click)="addCity()" [disabled]="loading">
+      {{ loading ? 'Ajout...' : 'Ajouter' }}
+    </button>
+  </div>
+
+  <div class="card">
+    <h2>Villes ({{ cities.length }})</h2>
+    <ul class="city-list" *ngIf="cities.length > 0">
+      <li class="city-item" *ngFor="let city of cities">
+        <span><strong>{{ city.name }}</strong> (X: {{ city.x }}, Y: {{ city.y }})</span>
+      </li>
+    </ul>
+    <p *ngIf="cities.length === 0">Aucune ville ajoutée</p>
+    <button class="btn btn-danger" (click)="clearCities()" *ngIf="cities.length > 0">
+      Tout effacer
+    </button>
+    <button class="btn btn-secondary" (click)="seedCities()" [disabled]="loading">
+      {{ loading ? 'Chargement...' : 'Charger villes' }}
+    </button>
+  </div>
+
+  <div class="card">
+    <button class="btn btn-success" (click)="optimize()" 
+            [disabled]="cities.length < 2 || optimizing">
+      {{ optimizing ? 'Optimisation en cours...' : 'Optimiser le trajet' }}
+    </button>
+
+    <div class="progress-info" *ngIf="optimizing && currentProgress">
+      <p><strong>Génération:</strong> {{ currentProgress.generation }} | 
+         <strong>Distance:</strong> {{ currentProgress.distance | number:'1.2-2' }}</p>
+    </div>
+
+    <div class="result" *ngIf="result">
+      <h3>Résultat optimal trouvé!</h3>
+      <p><strong>Distance totale:</strong> {{ result.totalDistance | number:'1.2-2' }}</p>
+      <p><strong>Générations:</strong> {{ result.generations }}</p>
+      <p><strong>Temps d'exécution:</strong> {{ result.executionTimeMs }}ms</p>
+      
+      <div class="route-list">
+        <strong>Meilleur trajet:</strong><br>
+        <span class="route-item" *ngFor="let city of result.optimalRoute; let i = index">
+          {{ city.name }}
+          <span class="route-arrow" *ngIf="i < result.optimalRoute.length - 1">→</span>
+        </span>
+        <span class="route-item" *ngIf="result.optimalRoute.length > 0">
+          → {{ result.optimalRoute[0].name }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Carte</h2>
+    <div id="map"></div>
+  </div>
+</div>

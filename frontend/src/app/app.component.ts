@@ -1,0 +1,187 @@
+import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TspService } from './service/tsp.service';
+import { City, TspResult, TspProgress } from './model/city';
+import * as L from 'leaflet';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
+  cities: City[] = [];
+  newCity: City = { name: '', x: 0, y: 0 };
+  result: TspResult | null = null;
+  loading = false;
+  optimizing = false;
+  currentProgress: TspProgress | null = null;
+
+  private map!: L.Map;
+  private markers: L.CircleMarker[] = [];
+  private routeLine: L.Polyline | null = null;
+
+  constructor(private tspService: TspService) {}
+
+  ngOnInit() {
+    this.loadCities();
+  }
+
+  ngAfterViewInit() {
+    this.initMap();
+  }
+
+  ngOnDestroy() {
+    if (this.map) {
+      this.map.remove();
+    }
+  }
+
+  private initMap() {
+    this.map = L.map('map').setView([46.2276, 2.2137], 6);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(this.map);
+  }
+
+  private updateMap() {
+    this.markers.forEach(marker => marker.remove());
+    this.markers = [];
+
+    if (this.routeLine) {
+      this.routeLine.remove();
+      this.routeLine = null;
+    }
+
+    const bounds: [number, number][] = [];
+
+    this.cities.forEach(city => {
+      const latLng = this.coordToLatLng(city.x, city.y);
+      bounds.push(latLng);
+
+      const marker = L.circleMarker(latLng as L.LatLngTuple, {
+        radius: 6,
+        fillColor: '#667eea',
+        color: '#fff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
+      }).bindPopup(city.name);
+
+      marker.addTo(this.map);
+      this.markers.push(marker);
+    });
+
+    if (bounds.length > 0) {
+      this.map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }
+
+  private updateRoute(route: City[]) {
+    if (this.routeLine) {
+      this.routeLine.remove();
+    }
+
+    const latLngs: [number, number][] = route.map(city => {
+      const lat = typeof city.x === 'string' ? parseFloat(city.x) : city.x;
+      const lng = typeof city.y === 'string' ? parseFloat(city.y) : city.y;
+      return [lat, lng];
+    });
+    latLngs.push([latLngs[0][0], latLngs[0][1]]);
+
+    this.routeLine = L.polyline(latLngs, {
+      color: '#e53e3e',
+      weight: 3,
+      opacity: 0.8
+    }).addTo(this.map);
+  }
+
+  private coordToLatLng(x: number | string, y: number | string): [number, number] {
+    return [x as number, y as number];
+  }
+
+  loadCities() {
+    this.tspService.getCities().subscribe({
+      next: (cities) => {
+        this.cities = cities;
+        setTimeout(() => this.updateMap(), 100);
+      },
+      error: () => this.cities = []
+    });
+  }
+
+  addCity() {
+    if (!this.newCity.name || this.newCity.x === undefined || this.newCity.y === undefined) {
+      return;
+    }
+
+    this.loading = true;
+    this.tspService.addCity(this.newCity).subscribe({
+      next: () => {
+        this.loadCities();
+        this.newCity = { name: '', x: 0, y: 0 };
+        this.loading = false;
+        this.result = null;
+        this.currentProgress = null;
+        if (this.routeLine) {
+          this.routeLine.remove();
+          this.routeLine = null;
+        }
+      },
+      error: () => this.loading = false
+    });
+  }
+
+  clearCities() {
+    this.tspService.deleteAllCities().subscribe({
+      next: () => {
+        this.cities = [];
+        this.result = null;
+        this.currentProgress = null;
+        this.updateMap();
+      }
+    });
+  }
+
+  optimize() {
+    if (this.cities.length < 2) {
+      return;
+    }
+
+    this.optimizing = true;
+    this.currentProgress = null;
+
+    const progress$ = this.tspService.optimizeStream();
+
+    progress$.subscribe({
+      next: (progress) => {
+        this.currentProgress = progress;
+        this.updateRoute(progress.bestRoute);
+      },
+      error: () => {
+        this.optimizing = false;
+      },
+      complete: () => {
+        this.optimizing = false;
+      }
+    });
+  }
+
+  seedCities() {
+    this.loading = true;
+    this.tspService.seedCities().subscribe({
+      next: (cities) => {
+        this.cities = cities;
+        this.result = null;
+        this.currentProgress = null;
+        this.loading = false;
+        setTimeout(() => this.updateMap(), 100);
+      },
+      error: () => this.loading = false
+    });
+  }
+}

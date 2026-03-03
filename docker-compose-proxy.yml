@@ -1,0 +1,10 @@
+services:
+  backend:
+    build:
+      args:
+        USE_NEXUS_MAVEN: "true"
+        USE_NEXUS_PIP: "true"
+  frontend:
+    build:
+      args:
+        USE_NEXUS_NPM: "true"
