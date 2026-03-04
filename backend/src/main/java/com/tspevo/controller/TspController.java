@@ -6,11 +6,15 @@ import com.tspevo.service.TspService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -96,8 +100,21 @@ public class TspController {
         return ResponseEntity.ok(geometry);
     }
     
-    @PostMapping("/cities/seed")
-    public ResponseEntity<List<City>> seedCities() {
-        return ResponseEntity.ok(tspService.seedCities());
+    @PostMapping(value = "/cities/csv/generate", produces = "text/csv")
+    public ResponseEntity<ByteArrayResource> generateCitiesCsv(@RequestBody Map<String, Integer> payload) {
+        int cityCount = payload == null ? 0 : payload.getOrDefault("cityCount", 0);
+        byte[] csvBytes = tspService.buildGeneratedCitiesCsv(cityCount);
+        String fileName = "tsp-generated-cities-" + cityCount + "-" + LocalDate.now() + ".csv";
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+            .contentType(MediaType.parseMediaType("text/csv"))
+            .contentLength(csvBytes.length)
+            .body(new ByteArrayResource(csvBytes));
+    }
+
+    @PostMapping(value = "/cities/csv/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> uploadCitiesCsv(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(tspService.importCitiesAndDistancesCsv(file));
     }
 }

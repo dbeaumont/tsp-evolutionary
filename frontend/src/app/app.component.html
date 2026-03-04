@@ -6,40 +6,34 @@
   </div>
 
   <div class="card">
-    <h2>Ajouter une ville</h2>
+    <h2>Generer fichier des villes</h2>
     <div class="form-group">
-      <label>Nom de la ville</label>
-      <input type="text" [(ngModel)]="newCity.name" placeholder="Ex: Paris">
+      <label>Nombre de villes a generer</label>
+      <input type="number" [(ngModel)]="cityCountToGenerate" min="2" max="50">
     </div>
-    <div class="form-group">
-      <label>Coordonnée X (0-100)</label>
-      <input type="number" [(ngModel)]="newCity.x" placeholder="Ex: 10" min="0" max="100">
-    </div>
-    <div class="form-group">
-      <label>Coordonnée Y (0-100)</label>
-      <input type="number" [(ngModel)]="newCity.y" placeholder="Ex: 20" min="0" max="100">
-    </div>
-    <button class="btn btn-primary" (click)="addCity()" [disabled]="loading">
-      {{ loading ? 'Ajout...' : 'Ajouter' }}
+    <button class="btn btn-secondary" (click)="generateCitiesCsv()" [disabled]="generatingCsv">
+      {{ generatingCsv ? 'Generation CSV...' : 'Generer CSV villes + distances' }}
     </button>
   </div>
 
   <div class="card">
-    <h2>Villes ({{ cities.length }})</h2>
+    <h2>Uploader fichier CSV des villes</h2>
+    <div class="form-group">
+      <label for="csvUpload">Fichier CSV villes + distances</label>
+      <input id="csvUpload" type="file" accept=".csv,text/csv" (change)="onCsvFileSelected($event)">
+      <small *ngIf="selectedCsvFile">{{ selectedCsvFile.name }}</small>
+    </div>
+    <button class="btn btn-primary" (click)="uploadCitiesCsv()" [disabled]="uploadingCsv || !selectedCsvFile">
+      {{ uploadingCsv ? 'Upload CSV...' : 'Uploader CSV villes/distances' }}
+    </button>
+
+    <h2 style="margin-top: 24px;">Villes chargees ({{ cities.length }})</h2>
     <ul class="city-list" *ngIf="cities.length > 0">
       <li class="city-item" *ngFor="let city of cities">
-        <span><strong>{{ city.name }}</strong> (X: {{ city.x }}, Y: {{ city.y }})</span>
+        <span><strong>{{ city.name }}</strong> (Lat: {{ city.x }}, Lon: {{ city.y }})</span>
       </li>
     </ul>
-    <p *ngIf="cities.length === 0">Aucune ville ajoutée</p>
-    <div class="btn-group">
-      <button class="btn btn-danger" (click)="clearCities()" *ngIf="cities.length > 0">
-        Tout effacer
-      </button>
-      <button class="btn btn-secondary" (click)="seedCities()" [disabled]="loading">
-        {{ loading ? 'Chargement...' : 'Charger villes' }}
-      </button>
-    </div>
+    <p *ngIf="cities.length === 0">Aucune ville chargee</p>
   </div>
 
   <div class="card">

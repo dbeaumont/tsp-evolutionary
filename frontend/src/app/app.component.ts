@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TspService } from './service/tsp.service';
@@ -15,10 +15,13 @@ import * as L from 'leaflet';
 })
 export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   cities: City[] = [];
-  newCity: City = { name: '', x: 0, y: 0 };
   result: TspResult | null = null;
   loading = false;
   optimizing = false;
+  generatingCsv = false;
+  uploadingCsv = false;
+  cityCountToGenerate = 20;
+  selectedCsvFile: File | null = null;
   currentProgress: TspProgress | null = null;
   toast: { message: string; type: string } | null = null;
   private toastTimeout: any;
@@ -29,10 +32,12 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private tspService: TspService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
+    console.log('ngOnInit called');
     this.loadCities();
     this.toastService.toasts$.subscribe(toast => {
       this.showToast(toast.message, toast.type);
@@ -171,53 +176,21 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   loadCities() {
+    this.loading = true;
+    this.cdr.detectChanges();
     this.tspService.getCities().subscribe({
       next: (cities) => {
         this.cities = cities;
-        setTimeout(() => this.updateMap(), 100);
-      },
-      error: (err) => {
-        console.error('Error loading cities:', err);
-        this.toastService.error('Erreur lors du chargement des villes - backend connecté?');
-        this.cities = [];
-      }
-    });
-  }
-
-  addCity() {
-    if (!this.newCity.name || this.newCity.x === undefined || this.newCity.y === undefined) {
-      return;
-    }
-
-    this.loading = true;
-    this.tspService.addCity(this.newCity).subscribe({
-      next: () => {
-        this.loadCities();
-        this.newCity = { name: '', x: 0, y: 0 };
         this.loading = false;
-        this.result = null;
-        this.currentProgress = null;
-        if (this.routeLine) {
-          this.routeLine.remove();
-          this.routeLine = null;
-        }
+        this.cdr.detectChanges();
+        setTimeout(() => this.updateMap(), 100);
       },
       error: () => {
         this.loading = false;
-        this.toastService.error('Erreur lors de l\'ajout de la ville');
-      }
-    });
-  }
-
-  clearCities() {
-    this.tspService.deleteAllCities().subscribe({
-      next: () => {
+        this.cdr.detectChanges();
+        this.toastService.error('Erreur lors du chargement des villes');
         this.cities = [];
-        this.result = null;
-        this.currentProgress = null;
-        this.updateMap();
-      },
-      error: () => this.toastService.error('Erreur lors de l\'effacement des villes')
+      }
     });
   }
 
@@ -273,17 +246,97 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  seedCities() {
-    this.loading = true;
-    this.tspService.seedCities().subscribe({
-      next: (cities) => {
-        this.cities = cities;
+  generateCitiesCsv() {
+    if (!Number.isFinite(this.cityCountToGenerate) || this.cityCountToGenerate < 2) {
+      this.toastService.error('Le nombre de villes doit etre superieur ou egal a 2');
+      return;
+    }
+    if (this.cityCountToGenerate > 50) {
+      this.toastService.error('Le nombre de villes doit etre inferieur ou egal a 50');
+      return;
+    }
+
+    this.generatingCsv = true;
+    this.cdr.detectChanges();
+    this.tspService.generateCitiesCsv(this.cityCountToGenerate).subscribe({
+      next: (response) => {
+        const csvBlob = response.body;
+        if (!csvBlob) {
+          this.toastService.error('Le backend a renvoyé un fichier vide');
+          return;
+        }
+        const fileName = this.extractFileName(response.headers.get('content-disposition'));
+        const objectUrl = URL.createObjectURL(csvBlob);
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = fileName ?? 'tsp-generated-cities.csv';
+        anchor.click();
+        URL.revokeObjectURL(objectUrl);
+        this.toastService.success(`CSV genere pour ${this.cityCountToGenerate} villes`);
+      },
+      error: () => {
+        this.generatingCsv = false;
+        this.cdr.detectChanges();
+        this.toastService.error('Erreur lors de la generation du CSV');
+      },
+      complete: () => {
+        this.generatingCsv = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  onCsvFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedCsvFile = input.files && input.files.length > 0 ? input.files[0] : null;
+  }
+
+  uploadCitiesCsv() {
+    if (!this.selectedCsvFile) {
+      this.toastService.error('Selectionnez un fichier CSV avant l\'upload');
+      return;
+    }
+
+    this.uploadingCsv = true;
+    this.cdr.detectChanges();
+    this.tspService.uploadCitiesCsv(this.selectedCsvFile).subscribe({
+      next: (result) => {
+        this.toastService.success(
+          `Import CSV termine: ${result.citiesImported} villes, ${result.distancePairsTotal} paires`
+        );
         this.result = null;
         this.currentProgress = null;
-        this.loading = false;
-        setTimeout(() => this.updateMap(), 100);
+        if (this.routeLine) {
+          this.routeLine.remove();
+          this.routeLine = null;
+        }
+        this.selectedCsvFile = null;
+        this.loadCities();
       },
-      error: () => this.loading = false
+      error: () => {
+        this.uploadingCsv = false;
+        this.cdr.detectChanges();
+        this.toastService.error('Erreur lors de l\'upload CSV');
+      },
+      complete: () => {
+        this.uploadingCsv = false;
+        this.cdr.detectChanges();
+      }
     });
+  }
+
+  private extractFileName(contentDisposition: string | null): string | null {
+    if (!contentDisposition) {
+      return null;
+    }
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match && utf8Match[1]) {
+      return decodeURIComponent(utf8Match[1]);
+    }
+    const standardMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    if (standardMatch && standardMatch[1]) {
+      return standardMatch[1];
+    }
+    return null;
   }
 }

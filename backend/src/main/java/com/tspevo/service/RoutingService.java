@@ -3,6 +3,7 @@ package com.tspevo.service;
 import com.tspevo.model.City;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -18,7 +19,10 @@ public class RoutingService {
     private final RestTemplate restTemplate;
     
     public RoutingService() {
-        this.restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(3000);
+        requestFactory.setReadTimeout(5000);
+        this.restTemplate = new RestTemplate(requestFactory);
     }
     
     public double getDistanceKm(City from, City to) {

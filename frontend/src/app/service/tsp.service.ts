@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
 import { City, TspResult, TspProgress } from '../model/city';
 
@@ -7,49 +7,62 @@ import { City, TspResult, TspProgress } from '../model/city';
   providedIn: 'root'
 })
 export class TspService {
-  private apiUrl = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8090/api' 
-    : '/api';
+  private readonly apiUrl = `${window.location.origin}/api`;
+  private readonly sseUrl = `${window.location.origin}/api/tsp/optimize/stream`;
 
   constructor(private http: HttpClient) {}
 
-  private getHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    };
-  }
-
   addCity(city: City): Observable<City> {
-    return this.http.post<City>(`${this.apiUrl}/cities`, city, { headers: this.getHeaders() });
+    return this.http.post<City>(`${this.apiUrl}/cities`, city);
   }
 
   getCities(): Observable<City[]> {
-    return this.http.get<City[]>(`${this.apiUrl}/cities`, { headers: this.getHeaders() });
+    return this.http.get<City[]>(`${this.apiUrl}/cities`);
   }
 
   deleteAllCities(): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/cities`, { headers: this.getHeaders() });
+    return this.http.delete<void>(`${this.apiUrl}/cities`);
   }
 
   optimize(): Observable<TspResult> {
-    return this.http.post<TspResult>(`${this.apiUrl}/tsp/optimize`, {}, { headers: this.getHeaders() });
+    return this.http.post<TspResult>(`${this.apiUrl}/tsp/optimize`, {});
   }
 
-  seedCities(): Observable<City[]> {
-    return this.http.post<City[]>(`${this.apiUrl}/cities/seed`, {}, { headers: this.getHeaders() });
+  generateCitiesCsv(cityCount: number): Observable<HttpResponse<Blob>> {
+    return this.http.post(`${this.apiUrl}/cities/csv/generate`, { cityCount }, {
+      observe: 'response',
+      responseType: 'blob'
+    });
+  }
+
+  uploadCitiesCsv(file: File): Observable<{
+    citiesImported: number;
+    distancePairsProvided: number;
+    distancePairsCalculated: number;
+    distancePairsTotal: number;
+    distanceEntriesCached: number;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<{
+      citiesImported: number;
+      distancePairsProvided: number;
+      distancePairsCalculated: number;
+      distancePairsTotal: number;
+      distanceEntriesCached: number;
+    }>(
+      `${this.apiUrl}/cities/csv/upload`,
+      formData
+    );
   }
 
   getRouteGeometry(fromCityId: number, toCityId: number): Observable<number[][]> {
-    return this.http.get<number[][]>(`${this.apiUrl}/tsp/route?fromCityId=${fromCityId}&toCityId=${toCityId}`, { headers: this.getHeaders() });
+    return this.http.get<number[][]>(`${this.apiUrl}/tsp/route?fromCityId=${fromCityId}&toCityId=${toCityId}`);
   }
 
   optimizeStream(): Subject<TspProgress> {
     const subject = new Subject<TspProgress>();
-    const baseUrl = window.location.hostname === 'localhost' 
-      ? 'http://localhost:8090' 
-      : '';
-    const eventSource = new EventSource(`${baseUrl}/api/tsp/optimize/stream`);
+    const eventSource = new EventSource(this.sseUrl);
 
     eventSource.onopen = () => {
       console.log('SSE connection opened');
