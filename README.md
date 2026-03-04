@@ -21,6 +21,51 @@ Le TSP est un probleme d'optimisation combinatoire classique :
 
 ## Architecture
 
+```mermaid
+graph TB
+    subgraph Docker_Network
+        User[("Utilisateur<br/>Firefox/Chrome")]
+        
+        subgraph Frontend["Container: Frontend (Nginx)"]
+            Nginx[Nginx<br/>:80<br/>Serveur web + Gateway]
+        end
+        
+        subgraph Backend["Container: Backend (Spring Boot)"]
+            API[API REST<br/>:8080<br/>Algorithme<br/>Evolutionnaire]
+        end
+        
+        subgraph DB["Container: PostgreSQL"]
+            Postgres[PostgreSQL<br/>:5432<br/>Base de données]
+        end
+    end
+    
+    User -->|"http://localhost:8090"| Nginx
+    Nginx -->|"GET /|POST /|DELETE /| SSE stream"| API
+    API -->|"JDBC"| Postgres
+    
+    style Nginx fill:#009900,color:#fff
+    style API fill:#6DB33F,color:#fff
+    style Postgres fill:#336791,color:#fff
+```
+
+### Le frontend comme gateway (anti-CORS)
+
+Le container **frontend** (Nginx) joue un double rôle :
+1. **Serveur web** : Sert les fichiers statiques Angular (HTML, JS, CSS)
+2. **Gateway API** : Proxie toutes les requêtes `/api` vers le backend
+
+Cette architecture permet d'**éviter les problèmes CORS** car :
+- Le navigateur émet toutes les requêtes vers le même domaine (`localhost:8090`)
+- Nginx转发 (/api/*) vers le backend en interne
+- Plus besoin de configurer `@CrossOrigin` ou d'en-têtes CORS complexes
+
+```
+┌─────────────┐    /api/*    ┌──────────────┐    JDBC    ┌────────────┐
+│ Navigateur  │ ──────────► │   Nginx      │ ─────────►│  Backend  │
+│             │ ◄────────── │ (Proxy)      │ ◄─────────│  (Spring) │
+└─────────────┘             └──────────────┘           └────────────┘
+```
+
 ```
 tsp-evolutionary/
 ├── docker-compose.yml
@@ -116,8 +161,8 @@ L'algorithme evolutionnaire s'inspire de la theorie de l'evolution naturelle pou
    ```
 
 3. **Acceder a l'application** :
-   - Frontend : http://localhost:80
-   - API Backend : http://localhost:8080/api
+   - Frontend : http://localhost:8090
+   - API Backend : http://localhost:8090/api
    - Base de donnees : localhost:5432
 
 ### Commandes Utiles
@@ -153,19 +198,19 @@ docker-compose logs -f postgres
 
 **Ajouter une ville** :
 ```bash
-curl -X POST http://localhost:8080/api/cities \
+curl -X POST http://localhost:8090/api/cities \
   -H "Content-Type: application/json" \
   -d '{"name": "Paris", "x": 10, "y": 20}'
 ```
 
 **Liste des villes** :
 ```bash
-curl http://localhost:8080/api/cities
+curl http://localhost:8090/api/cities
 ```
 
 **Lancer l'optimisation** :
 ```bash
-curl -X POST http://localhost:8080/api/tsp/optimize
+curl -X POST http://localhost:8090/api/tsp/optimize
 ```
 
 **Reponse d'optimisation** :
@@ -227,8 +272,8 @@ environment:
 
 | Service | Port |
 |---------|------|
-| Frontend (Nginx) | 8080 |
-| Backend (Spring Boot) | 8081 |
+| Frontend (Nginx) | 8090 |
+| Backend (Spring Boot) | 8091 |
 | PostgreSQL | 5432 |
 
 ## Developpement

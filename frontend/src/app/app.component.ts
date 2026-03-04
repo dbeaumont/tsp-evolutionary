@@ -177,7 +177,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         setTimeout(() => this.updateMap(), 100);
       },
       error: (err) => {
-        this.toastService.error('Erreur lors du chargement des villes');
+        console.error('Error loading cities:', err);
+        this.toastService.error('Erreur lors du chargement des villes - backend connecté?');
         this.cities = [];
       }
     });

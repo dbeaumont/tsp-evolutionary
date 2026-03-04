@@ -25,8 +25,8 @@ install: ## Installation complete (premiere fois)
 	$(COMPOSE) build
 	$(COMPOSE) up -d
 	@echo "$(GREEN)Installation terminee!$(NC)"
-	@echo "Frontend: http://localhost:8080"
-	@echo "Backend API: http://localhost:8081/api"
+	@echo "Frontend: http://localhost:8090"
+	@echo "Backend API: http://localhost:8091/api"
 	@echo "PostgreSQL: localhost:5432"
 
 install-proxy: ## Installation avec proxy (Nexus)
@@ -34,8 +34,8 @@ install-proxy: ## Installation avec proxy (Nexus)
 	docker-compose -f docker-compose.yml -f docker-compose-proxy.yml build
 	docker-compose -f docker-compose.yml -f docker-compose-proxy.yml up -d
 	@echo "$(GREEN)Installation terminee!$(NC)"
-	@echo "Frontend: http://localhost:8080"
-	@echo "Backend API: http://localhost:8081/api"
+	@echo "Frontend: http://localhost:8090"
+	@echo "Backend API: http://localhost:8091/api"
 	@echo "PostgreSQL: localhost:5432"
 
 up: ## Demarre tous les services
