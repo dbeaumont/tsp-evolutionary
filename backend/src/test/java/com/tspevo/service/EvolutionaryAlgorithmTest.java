@@ -98,7 +98,7 @@ class EvolutionaryAlgorithmTest {
     void solve_withProgressCallback_shouldCallCallback() {
         final int[] callbackCount = {0};
         
-        evolutionaryAlgorithm.solve(testCities, progress -> {
+        evolutionaryAlgorithm.solve(testCities, (c1, c2) -> haversineDistance(c1, c2), progress -> {
             callbackCount[0]++;
             assertNotNull(progress.getBestRoute());
             assertTrue(progress.getDistance() >= 0);
@@ -106,5 +106,23 @@ class EvolutionaryAlgorithmTest {
         });
         
         assertTrue(callbackCount[0] > 0, "Callback should have been called");
+    }
+    
+    private double haversineDistance(City c1, City c2) {
+        final double R = 6371.0;
+        double lat1 = Math.toRadians(c1.getX());
+        double lat2 = Math.toRadians(c2.getX());
+        double lon1 = Math.toRadians(c1.getY());
+        double lon2 = Math.toRadians(c2.getY());
+        
+        double dLat = lat2 - lat1;
+        double dLon = lon2 - lon1;
+        
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                   Math.cos(lat1) * Math.cos(lat2) *
+                   Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 }

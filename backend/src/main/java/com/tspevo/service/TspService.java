@@ -3,20 +3,32 @@ package com.tspevo.service;
 import com.tspevo.model.City;
 import com.tspevo.model.TspResult;
 import com.tspevo.repository.CityRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 @Service
 public class TspService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(TspService.class);
     
     @Autowired
     private CityRepository cityRepository;
     
     @Autowired
     private EvolutionaryAlgorithm evolutionaryAlgorithm;
+    
+    @Autowired
+    private RoutingService routingService;
+    
+    private final Map<String, Double> distanceCache = new ConcurrentHashMap<>();
     
     private static final String[][] FRENCH_CITIES = {
         {"Paris", "48.8566", "2.3522"},
@@ -131,26 +143,68 @@ public class TspService {
     
     public void deleteAllCities() {
         cityRepository.deleteAll();
+        distanceCache.clear();
+    }
+    
+    public double getDistance(City from, City to) {
+        if (from.getId() == null || to.getId() == null) {
+            return routingService.getDistanceKm(from, to);
+        }
+        String key = from.getId() + "-" + to.getId();
+        return distanceCache.computeIfAbsent(key, k -> {
+            String reverseKey = to.getId() + "-" + from.getId();
+            if (distanceCache.containsKey(reverseKey)) {
+                return distanceCache.get(reverseKey);
+            }
+            return routingService.getDistanceKm(from, to);
+        });
+    }
+    
+    public List<double[]> getRouteGeometry(City from, City to) {
+        return routingService.getRouteGeometry(from, to);
     }
     
     public TspResult optimize() {
         List<City> cities = cityRepository.findAll();
-        return evolutionaryAlgorithm.solve(cities);
+        return evolutionaryAlgorithm.solve(cities, this::getDistance);
     }
     
     public TspResult optimizeWithProgress(Consumer<TspProgress> progressCallback) {
         List<City> cities = cityRepository.findAll();
-        return evolutionaryAlgorithm.solve(cities, progressCallback);
+        return evolutionaryAlgorithm.solve(cities, this::getDistance, progressCallback);
     }
     
     public List<City> seedCities() {
         cityRepository.deleteAll();
+        distanceCache.clear();
         
+        List<City> savedCities = new java.util.ArrayList<>();
         for (String[] cityData : FRENCH_CITIES) {
             City city = new City(cityData[0], Double.parseDouble(cityData[1]), Double.parseDouble(cityData[2]));
-            cityRepository.save(city);
+            savedCities.add(cityRepository.save(city));
         }
         
-        return cityRepository.findAll();
+        logger.info("Calculating road distances for {} cities...", savedCities.size());
+        
+        int totalPairs = savedCities.size() * (savedCities.size() - 1) / 2;
+        int calculated = 0;
+        
+        for (int i = 0; i < savedCities.size(); i++) {
+            for (int j = i + 1; j < savedCities.size(); j++) {
+                City c1 = savedCities.get(i);
+                City c2 = savedCities.get(j);
+                double distance = routingService.getDistanceKm(c1, c2);
+                distanceCache.put(c1.getId() + "-" + c2.getId(), distance);
+                distanceCache.put(c2.getId() + "-" + c1.getId(), distance);
+                calculated++;
+                if (calculated % 50 == 0) {
+                    logger.info("Calculated {}/{} distances", calculated, totalPairs);
+                }
+            }
+        }
+        
+        logger.info("Distance matrix ready with {} entries", distanceCache.size());
+        
+        return savedCities;
     }
 }

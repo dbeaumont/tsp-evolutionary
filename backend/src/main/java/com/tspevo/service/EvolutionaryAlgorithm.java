@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 @Service
@@ -25,10 +26,14 @@ public class EvolutionaryAlgorithm {
     }
     
     public TspResult solve(List<City> cities) {
-        return solve(cities, null);
+        return solve(cities, this::defaultDistance, null);
     }
     
-    public TspResult solve(List<City> cities, Consumer<TspProgress> progressCallback) {
+    public TspResult solve(List<City> cities, BiFunction<City, City, Double> distanceFunction) {
+        return solve(cities, distanceFunction, null);
+    }
+    
+    public TspResult solve(List<City> cities, BiFunction<City, City, Double> distanceFunction, Consumer<TspProgress> progressCallback) {
         if (cities.size() < 2) {
             return new TspResult(cities, 0.0, 0, 0);
         }
@@ -41,9 +46,9 @@ public class EvolutionaryAlgorithm {
         int generation = 0;
         
         for (int gen = 0; gen < config.getMaxGenerations(); gen++) {
-            Collections.sort(population, Comparator.comparingDouble(this::calculateDistance));
+            Collections.sort(population, Comparator.comparingDouble(route -> calculateDistance(route, distanceFunction)));
             
-            double currentBest = calculateDistance(population.get(0));
+            double currentBest = calculateDistance(population.get(0), distanceFunction);
             if (currentBest < bestFitness) {
                 bestFitness = currentBest;
                 bestIndividual = new ArrayList<>(population.get(0));
@@ -59,8 +64,8 @@ public class EvolutionaryAlgorithm {
             newPopulation.add(new ArrayList<>(population.get(0)));
             
             while (newPopulation.size() < config.getPopulationSize()) {
-                List<City> parent1 = tournamentSelection(population);
-                List<City> parent2 = tournamentSelection(population);
+                List<City> parent1 = tournamentSelection(population, distanceFunction);
+                List<City> parent2 = tournamentSelection(population, distanceFunction);
                 
                 List<City> child;
                 if (random.nextDouble() < config.getCrossoverRate()) {
@@ -89,6 +94,10 @@ public class EvolutionaryAlgorithm {
         return new TspResult(bestIndividual, bestFitness, generation, endTime - startTime);
     }
     
+    private double defaultDistance(City c1, City c2) {
+        return haversineDistance(c1, c2);
+    }
+    
     private List<List<City>> initializePopulation(List<City> cities, int size) {
         List<List<City>> population = new ArrayList<>();
         for (int i = 0; i < size; i++) {
@@ -99,11 +108,11 @@ public class EvolutionaryAlgorithm {
         return population;
     }
     
-    private List<City> tournamentSelection(List<List<City>> population) {
+    private List<City> tournamentSelection(List<List<City>> population, BiFunction<City, City, Double> distanceFunction) {
         List<City> best = null;
         for (int i = 0; i < config.getTournamentSize(); i++) {
             List<City> individual = population.get(random.nextInt(population.size()));
-            if (best == null || calculateDistance(individual) < calculateDistance(best)) {
+            if (best == null || calculateDistance(individual, distanceFunction) < calculateDistance(best, distanceFunction)) {
                 best = new ArrayList<>(individual);
             }
         }
@@ -143,13 +152,13 @@ public class EvolutionaryAlgorithm {
         individual.set(j, temp);
     }
     
-    private double calculateDistance(List<City> route) {
+    private double calculateDistance(List<City> route, BiFunction<City, City, Double> distanceFunction) {
         double distance = 0.0;
         for (int i = 0; i < route.size() - 1; i++) {
-            distance += haversineDistance(route.get(i), route.get(i + 1));
+            distance += distanceFunction.apply(route.get(i), route.get(i + 1));
         }
         if (route.size() > 1) {
-            distance += haversineDistance(route.get(route.size() - 1), route.get(0));
+            distance += distanceFunction.apply(route.get(route.size() - 1), route.get(0));
         }
         return distance;
     }

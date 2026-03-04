@@ -108,13 +108,62 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       const lng = typeof city.y === 'string' ? parseFloat(city.y) : city.y;
       return [lat, lng];
     });
-    latLngs.push([latLngs[0][0], latLngs[0][1]]);
 
-    this.routeLine = L.polyline(latLngs, {
-      color: '#e53e3e',
-      weight: 3,
-      opacity: 0.8
-    }).addTo(this.map);
+    if (latLngs.length > 1) {
+      const allRouteCoords: [number, number][] = [];
+      
+      const routePromises: Promise<void>[] = [];
+      for (let i = 0; i < latLngs.length - 1; i++) {
+        const fromCity = route[i];
+        const toCity = route[i + 1];
+        
+        if (!fromCity.id || !toCity.id) {
+          allRouteCoords.push(latLngs[i]);
+          allRouteCoords.push(latLngs[i + 1]);
+          continue;
+        }
+        
+        const promise = new Promise<void>((resolve) => {
+          this.tspService.getRouteGeometry(fromCity.id!, toCity.id!).subscribe({
+            next: (geometry) => {
+              if (geometry && geometry.length > 0) {
+                geometry.forEach((coord: number[]) => {
+                  allRouteCoords.push([coord[0], coord[1]]);
+                });
+              } else {
+                allRouteCoords.push(latLngs[i]);
+                allRouteCoords.push(latLngs[i + 1]);
+              }
+              resolve();
+            },
+            error: () => {
+              allRouteCoords.push(latLngs[i]);
+              allRouteCoords.push(latLngs[i + 1]);
+              resolve();
+            }
+          });
+        });
+        routePromises.push(promise);
+      }
+
+      Promise.all(routePromises).then(() => {
+        if (allRouteCoords.length > 0) {
+          allRouteCoords.push(allRouteCoords[0]);
+        }
+        
+        this.routeLine = L.polyline(allRouteCoords.length > 0 ? allRouteCoords : latLngs, {
+          color: '#e53e3e',
+          weight: 3,
+          opacity: 0.8
+        }).addTo(this.map);
+      });
+    } else {
+      this.routeLine = L.polyline(latLngs, {
+        color: '#e53e3e',
+        weight: 3,
+        opacity: 0.8
+      }).addTo(this.map);
+    }
   }
 
   private coordToLatLng(x: number | string, y: number | string): [number, number] {

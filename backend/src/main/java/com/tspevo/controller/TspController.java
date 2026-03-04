@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -77,6 +78,22 @@ public class TspController {
         return ResponseEntity.ok()
             .contentType(MediaType.TEXT_EVENT_STREAM)
             .body(emitter);
+    }
+    
+    @GetMapping("/tsp/route")
+    public ResponseEntity<List<double[]>> getRoute(
+            @RequestParam Long fromCityId, 
+            @RequestParam Long toCityId) {
+        List<City> cities = tspService.getAllCities();
+        City from = cities.stream().filter(c -> c.getId().equals(fromCityId)).findFirst().orElse(null);
+        City to = cities.stream().filter(c -> c.getId().equals(toCityId)).findFirst().orElse(null);
+        
+        if (from == null || to == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        List<double[]> geometry = tspService.getRouteGeometry(from, to);
+        return ResponseEntity.ok(geometry);
     }
     
     @PostMapping("/cities/seed")

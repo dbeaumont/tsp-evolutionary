@@ -52,4 +52,8 @@ export class TspService {
   seedCities(): Observable<City[]> {
     return this.http.post<City[]>(`${this.apiUrl}/cities/seed`, {});
   }
+
+  getRouteGeometry(fromCityId: number, toCityId: number): Observable<number[][]> {
+    return this.http.get<number[][]>(`${this.apiUrl}/tsp/route?fromCityId=${fromCityId}&toCityId=${toCityId}`);
+  }
 }
