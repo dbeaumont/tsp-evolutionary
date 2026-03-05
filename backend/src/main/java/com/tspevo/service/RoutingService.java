@@ -1,66 +1,94 @@
 package com.tspevo.service;
 
+import com.tspevo.service.OsrmConnector.OsrmDistanceResponse;
+import com.tspevo.service.OsrmConnector.OsrmGeometryResponse;
 import com.tspevo.model.City;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class RoutingService {
     
     private static final Logger logger = LoggerFactory.getLogger(RoutingService.class);
-    private static final String OSRM_API = "http://router.project-osrm.org/route/v1/driving/";
     
-    private final RestTemplate restTemplate;
+    private final OsrmConnector osrmConnector;
+    private final ConcurrentHashMap<String, Double> distanceCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<double[]>> geometryCache = new ConcurrentHashMap<>();
     
-    public RoutingService() {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(3000);
-        requestFactory.setReadTimeout(5000);
-        this.restTemplate = new RestTemplate(requestFactory);
+    public RoutingService(OsrmConnector osrmConnector) {
+        this.osrmConnector = osrmConnector;
+    }
+    
+    private String getCacheKey(long fromId, long toId) {
+        long min = Math.min(fromId, toId);
+        long max = Math.max(fromId, toId);
+        return min + "-" + max;
     }
     
     public double getDistanceKm(City from, City to) {
-        try {
-            String url = String.format("%s%s,%s;%s,%s?overview=false", 
-                OSRM_API, from.getY(), from.getX(), to.getY(), to.getX());
-            
-            OsrmResponse response = restTemplate.getForObject(url, OsrmResponse.class);
-            
-            if (response != null && response.getRoutes() != null && !response.getRoutes().isEmpty()) {
-                return response.getRoutes().get(0).getDistance() / 1000.0;
-            }
-        } catch (Exception e) {
-            logger.warn("Failed to get distance from {} to {}: {}", from.getName(), to.getName(), e.getMessage());
+        long fromId = from.getId() != null ? from.getId() : from.getName().hashCode();
+        long toId = to.getId() != null ? to.getId() : to.getName().hashCode();
+        String cacheKey = getCacheKey(fromId, toId);
+        
+        Double cached = distanceCache.get(cacheKey);
+        if (cached != null) {
+            logger.debug("Using cached distance for {} -> {}: {} km", from.getName(), to.getName(), cached);
+            return cached;
         }
-        return haversineDistance(from, to);
+        
+        logger.info("Calling OSRM for distance: {} -> {}", from.getName(), to.getName());
+        
+        OsrmDistanceResponse response = osrmConnector.fetchDistance(
+            from.getY(), from.getX(), to.getY(), to.getX());
+        
+        if (response.success()) {
+            logger.info("OSRM distance {} -> {}: {} km", from.getName(), to.getName(), response.distance());
+            distanceCache.put(cacheKey, response.distance());
+            return response.distance();
+        }
+        
+        logger.warn("OSRM failed, using Haversine fallback for {} -> {}", from.getName(), to.getName());
+        double distance = haversineDistance(from, to);
+        distanceCache.put(cacheKey, distance);
+        return distance;
     }
     
     public List<double[]> getRouteGeometry(City from, City to) {
-        List<double[]> coordinates = new ArrayList<>();
-        try {
-            String url = String.format("%s%s,%s;%s,%s?overview=full&geometries=geojson", 
-                OSRM_API, from.getY(), from.getX(), to.getY(), to.getX());
-            
-            OsrmResponse response = restTemplate.getForObject(url, OsrmResponse.class);
-            
-            if (response != null && response.getRoutes() != null && !response.getRoutes().isEmpty()) {
-                OsrmGeometry geometry = response.getRoutes().get(0).getGeometry();
-                if (geometry != null && geometry.getCoordinates() != null) {
-                    for (List<Double> coord : geometry.getCoordinates()) {
-                        coordinates.add(new double[]{coord.get(1), coord.get(0)});
-                    }
-                }
-            }
-        } catch (Exception e) {
-            logger.warn("Failed to get route from {} to {}: {}", from.getName(), to.getName(), e.getMessage());
+        long fromId = from.getId() != null ? from.getId() : from.getName().hashCode();
+        long toId = to.getId() != null ? to.getId() : to.getName().hashCode();
+        String cacheKey = getCacheKey(fromId, toId);
+        
+        List<double[]> cached = geometryCache.get(cacheKey);
+        if (cached != null) {
+            logger.debug("Using cached geometry for {} -> {}", from.getName(), to.getName());
+            return cached;
         }
-        return coordinates;
+        
+        logger.info("Calling OSRM for route geometry: {} -> {}", from.getName(), to.getName());
+        
+        OsrmGeometryResponse response = osrmConnector.fetchGeometry(
+            from.getY(), from.getX(), to.getY(), to.getX());
+        
+        if (response.success() && response.coordinates() != null) {
+            List<double[]> coordinates = new ArrayList<>();
+            for (List<Double> coord : response.coordinates()) {
+                coordinates.add(new double[]{coord.get(1), coord.get(0)});
+            }
+            logger.info("OSRM route {} -> {}: {} points", from.getName(), to.getName(), coordinates.size());
+            geometryCache.put(cacheKey, coordinates);
+            return coordinates;
+        }
+        
+        logger.warn("OSRM failed, using straight line fallback for {} -> {}", from.getName(), to.getName());
+        List<double[]> coords = new ArrayList<>();
+        coords.add(new double[]{from.getX(), from.getY()});
+        coords.add(new double[]{to.getX(), to.getY()});
+        return coords;
     }
     
     private double haversineDistance(City c1, City c2) {
@@ -81,27 +109,9 @@ public class RoutingService {
         return R * c;
     }
     
-    static class OsrmResponse {
-        private List<OsrmRoute> routes;
-        
-        public List<OsrmRoute> getRoutes() { return routes; }
-        public void setRoutes(List<OsrmRoute> routes) { this.routes = routes; }
-    }
-    
-    static class OsrmRoute {
-        private double distance;
-        private OsrmGeometry geometry;
-        
-        public double getDistance() { return distance; }
-        public void setDistance(double distance) { this.distance = distance; }
-        public OsrmGeometry getGeometry() { return geometry; }
-        public void setGeometry(OsrmGeometry geometry) { this.geometry = geometry; }
-    }
-    
-    static class OsrmGeometry {
-        private List<List<Double>> coordinates;
-        
-        public List<List<Double>> getCoordinates() { return coordinates; }
-        public void setCoordinates(List<List<Double>> coordinates) { this.coordinates = coordinates; }
+    public void clearCache() {
+        distanceCache.clear();
+        geometryCache.clear();
+        logger.info("Distance and geometry caches cleared");
     }
 }
